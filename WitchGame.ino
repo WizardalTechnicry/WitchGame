@@ -25,9 +25,15 @@ const unsigned char PROGMEM bat_outline[] =
 
 int witchWidth = Witch_Default[0];
 int witchHeight = Witch_Default[1];
+int batWidth = bat_outline[0];
+int batHeight = bat_outline[1];
 int witchX = 0;
 int witchY = 0;
-int witchSpeed =1;
+int batX = (128-batWidth);
+int batY = (32-(batHeight/2));
+int witchSpeed =2;
+int scrollSpeed = 1;
+int batDirection = 1;
 
 bool AButtonPressed = false;
 bool BButtonPressed = false;
@@ -83,20 +89,29 @@ arduboy.clear();
         
         if(arduboy.pressed(A_BUTTON)and AButtonPressed == false) {
           AButtonPressed = true;
-          witchSpeed++;
+          scrollSpeed++; //change to witchSpeed in all instances from there to test witch movement speed about the screen
         }
         if(arduboy.pressed(B_BUTTON)and BButtonPressed == false) {
           BButtonPressed = true;
-          witchSpeed--;
+          scrollSpeed--;
         }
 
-     if(witchSpeed<1){ witchSpeed = 1; }
-     if(witchSpeed>5){ witchSpeed = 5; }
+     if(scrollSpeed<1){ scrollSpeed = 1; }
+     if(scrollSpeed>5){ scrollSpeed = 5; }
+
+batX = batX - scrollSpeed;
+if(batX<(0-batWidth)) { batX = 128; }
+
+batY = batY + (scrollSpeed*batDirection);
+
+if(batY >40 ) { batDirection = -1; } //this gives a sinwave ish movement
+if(batY <16 ) { batDirection = 1; }
+     
 arduboy.setCursor(0, 0);
-arduboy.println(witchSpeed);
+arduboy.println(scrollSpeed);
 
 Sprites::drawOverwrite(witchX, witchY, Witch_Default, 0);
-Sprites::drawOverwrite(64, 10, bat_outline, 0);
+Sprites::drawOverwrite(batX,batY, bat_outline, 0);
  arduboy.display();
 
  //resets the bools that say a button is pressed (makes it wait for release to stop multiple hit on every press)
