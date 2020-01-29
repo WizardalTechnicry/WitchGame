@@ -73,9 +73,9 @@ struct EnemyType1{
 };
 
 /**************** Variable Declarations *****************/
-const int totalBats = 3;
-long batLevelStartPos[totalBats] = {128,260,500};
-int batLevelStartHeight[totalBats]= {(32-(batOutline[1]/2)),0,10}; //currently has to be over "bounce point (16) due to movement code. change to factor in move type and direction varies based on this (below midpoint go up,above go down)
+const int totalBats = 4;
+long batLevelStartPos[totalBats] = {128,135,260,500};
+int batLevelStartHeight[totalBats]= {(32-(batOutline[1]/2)),0,0,10}; //currently has to be over "bounce point (16) due to movement code. change to factor in move type and direction varies based on this (below midpoint go up,above go down)
 EnemyType1 bats[totalBats];
 Rect batRects[totalBats];
 
