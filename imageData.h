@@ -1,4 +1,5 @@
-
+/*********Converted (by team ARG tool) images/sprites for game**********/
+//NOTES: Masks do not have width/height (will offset mask). Screen backdrops cannot exceed 128 (width of screen), so use 2+ and scroll (see code file)
 
 const unsigned char PROGMEM witchDefaultFrameA[] =
 {
