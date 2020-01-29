@@ -73,9 +73,9 @@ struct EnemyType1{
 };
 
 /**************** Variable Declarations *****************/
-const int totalBats = 2;
-long batLevelStartPos[totalBats] = {128,260};
-int batLevelStartHeight[totalBats]= {(32-(batOutline[1]/2)),0};
+const int totalBats = 3;
+long batLevelStartPos[totalBats] = {128,260,500};
+int batLevelStartHeight[totalBats]= {(32-(batOutline[1]/2)),0,10}; //currently has to be over "bounce point (16) due to movement code. change to factor in move type and direction varies based on this (below midpoint go up,above go down)
 EnemyType1 bats[totalBats];
 Rect batRects[totalBats];
 
@@ -164,7 +164,6 @@ void setup() {
   CreateBats(); //see above, makes all the bat data in game at start up (could put at level start if multiple levels?)
 }
 
-
 /**************** Main Code Loop *****************/
 void loop() {
  if(!arduboy.nextFrame()) {
@@ -175,7 +174,13 @@ void loop() {
   /*Level Position Logic*/
   if (arduboy.everyXFrames(scrollSpeed)){
   scrollDistance++;
-  screenCount = scrollDistance/128;
+  screenCount = (scrollDistance/128) + 1; //this always rounds down (so is correct for whole screens starting at 1)
+  if(screenCount > 5){
+    scrollDistance = 0;
+    for(int i=0;i<totalBats; i++){
+      bats[i].xPos = 128 - bats[i].emyWidth; //test code, reset "level after 5 screen and reset bats to respawn
+    }
+  }
   }
   
   /*Input Control*/
@@ -237,7 +242,9 @@ void loop() {
   
   /*Screen Drawing Code*/
   arduboy.setCursor(0, 0);
+  arduboy.println(screenCount);
   arduboy.println(test);
+
   
   /*Drawing background code*/
   hillsCounter = BackgroundLayer(hillsBackdrop, hillsCounter);
