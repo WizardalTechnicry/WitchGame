@@ -97,6 +97,10 @@ bool rightButtonPressed = false;
 bool secondFrame = false;
 bool hitThisCycle = false;
 
+bool areaAttack = false;
+int areaAttackFrame = 0;
+int areaAttackLength = 4; //number of frames of witch animation for the attack
+
 String test = "";
 
 Arduboy2 arduboy;
@@ -214,6 +218,11 @@ void loop() {
   }  
   if(arduboy.pressed(A_BUTTON)and aButtonPressed == false) {
     aButtonPressed = true;
+    if(areaAttack == false) 
+    { 
+      areaAttack = true;
+      areaAttackFrame = 0; 
+    }
   }
   if(arduboy.pressed(B_BUTTON)and bButtonPressed == false) {
     bButtonPressed = true;
@@ -238,6 +247,8 @@ void loop() {
   /*Witch Animation Code*/
   if (arduboy.everyXFrames(20/scrollSpeed)) { 
     if(!secondFrame) { secondFrame = true; } else { secondFrame = false;}
+    if(areaAttack) { areaAttackFrame++; }
+    if(areaAttackFrame > areaAttackLength) { areaAttack = false; areaAttackFrame = 0;}
   }
   
   /*Screen Drawing Code*/
@@ -251,7 +262,22 @@ void loop() {
   cityCounter = ForegroundLayer(citySkyline, cityCounter);
   
   /*Drawing Witch Code*/
-  if(secondFrame) { Sprites::drawExternalMask(witch.xPos, witch.yPos, witch.defaultFrameA,witch.defaultMask,0, 0); } else { Sprites::drawExternalMask(witch.xPos, witch.yPos, witch.defaultFrameB,witch.defaultMask,0, 0); } 
+  if(secondFrame){ 
+    if(areaAttack) {
+        Sprites::drawExternalMask(witch.xPos, witch.yPos-10, areaAttackFrameA, areaAttackMaskA, 0, 0); 
+    }
+    else{
+        Sprites::drawExternalMask(witch.xPos, witch.yPos, witch.defaultFrameA, witch.defaultMask, 0, 0); 
+    }
+  } 
+  else{
+    if(areaAttack) {
+      Sprites::drawExternalMask(witch.xPos, witch.yPos-10, areaAttackFrameB, areaAttackMaskB,0, 0); 
+    }
+    else{
+      Sprites::drawExternalMask(witch.xPos, witch.yPos, witch.defaultFrameB, witch.defaultMask, 0, 0); 
+    }
+    } 
   
   /*Drwing Enemies (bats) Code*/
   for(int i = 0; i<totalBats; i++){ 
