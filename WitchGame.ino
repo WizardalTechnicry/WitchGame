@@ -79,7 +79,7 @@ int batLevelStartHeight[totalBats]= {(32-(batOutline[1]/2)),0,0,10}; //currently
 EnemyType1 bats[totalBats];
 Rect batRects[totalBats];
 
-PlayerCharacter witch = { witchDefaultFrameA[0],witchDefaultFrameA[1],0,0,2,State::Default,witchDefaultFrameA,witchDefaultFrameB,witchDefaultABMask };
+PlayerCharacter witch = { witchDefaultFrameA[0],witchDefaultFrameA[1],0,0,1,State::Default,witchDefaultFrameA,witchDefaultFrameB,witchDefaultABMask };
 
 long scrollDistance = 0;
 
@@ -100,6 +100,11 @@ bool hitThisCycle = false;
 bool areaAttack = false;
 int areaAttackFrame = 0;
 int areaAttackLength = 4; //number of frames of witch animation for the attack
+
+bool longAttack = false;
+int longAttackSpeed = 8; //number of pixels it moves per frame
+int longAttackX = -100;
+int longAttackY = -100;
 
 String test = "";
 
@@ -183,6 +188,7 @@ void loop() {
     scrollDistance = 0;
     for(int i=0;i<totalBats; i++){
       bats[i].xPos = 128 - bats[i].emyWidth; //test code, reset "level after 5 screen and reset bats to respawn
+      bats[i].hit = false;
     }
   }
   }
@@ -226,15 +232,31 @@ void loop() {
   }
   if(arduboy.pressed(B_BUTTON)and bButtonPressed == false) {
     bButtonPressed = true;
+    if(longAttack == false)
+    {
+      longAttack = true;
+      longAttackX = witch.xPos + witch.pcWidth - 5; //5 is just to look nicer!
+      longAttackY = witch.yPos + (witch.pcHeight/2) - 2; //(2 is ~1/2 of the attack sprite height, could also reference this from sprite data)
+    }
   }
   
   /*Collision Detection*/
   Rect witchRect = {witch.xPos, witch.yPos+4, witch.pcWidth-8, witch.pcHeight}; //smaller so only body, avoid broom hits counting
+  Rect areaAttackRect = {witch.xPos, witch.yPos-10, 30, 40};  
+  Rect longAttackRect = {longAttackX, longAttackY, 10, 5};  
   for(int i = 0; i<totalBats; i++){ 
     batRects[i] = {bats[i].xPos,bats[i].yPos,bats[i].emyWidth,bats[i].emyHeight }; 
     if(arduboy.collide(witchRect,batRects[i])){  
       hitThisCycle = true;  
     }
+    if((areaAttack && arduboy.collide(areaAttackRect,batRects[i]))||(longAttack && arduboy.collide(longAttackRect,batRects[i]))) 
+    {
+      bats[i].hit = true;  
+    }
+    //else
+    //{
+      //bats[i].hit = false;  
+    //}  //else not needed outside of hit testing, once hit they are hit and dead unitl respawn
   }
   if(hitThisCycle==true){ 
     test = "hit!"; 
@@ -245,16 +267,22 @@ void loop() {
   hitThisCycle= false;
   
   /*Witch Animation Code*/
-  if (arduboy.everyXFrames(20/scrollSpeed)) { 
+  if (arduboy.everyXFrames(18/scrollSpeed)) { 
     if(!secondFrame) { secondFrame = true; } else { secondFrame = false;}
     if(areaAttack) { areaAttackFrame++; }
     if(areaAttackFrame > areaAttackLength) { areaAttack = false; areaAttackFrame = 0;}
+    if(longAttack) { longAttackX = longAttackX + longAttackSpeed; }
+    if(longAttackX > 128) { longAttack = false; }
   }
   
   /*Screen Drawing Code*/
   arduboy.setCursor(0, 0);
-  arduboy.println(screenCount);
-  arduboy.println(test);
+ //Debug code here
+  //arduboy.println(screenCount);
+  //arduboy.println(test);
+  // for(int i = 0; i<totalBats; i++){ 
+  //  if(bats[i].hit==true){ arduboy.println(i); }
+  // }
 
   
   /*Drawing background code*/
@@ -262,7 +290,8 @@ void loop() {
   cityCounter = ForegroundLayer(citySkyline, cityCounter);
   
   /*Drawing Witch Code*/
-  if(secondFrame){ 
+  if(secondFrame){
+    Sprites::drawExternalMask(longAttackX, longAttackY, longAttackFrameA, longAttackMaskA, 0, 0); 
     if(areaAttack) {
         Sprites::drawExternalMask(witch.xPos, witch.yPos-10, areaAttackFrameA, areaAttackMaskA, 0, 0); 
     }
@@ -271,6 +300,7 @@ void loop() {
     }
   } 
   else{
+    Sprites::drawExternalMask(longAttackX, longAttackY, longAttackFrameB, longAttackMaskB, 0, 0); 
     if(areaAttack) {
       Sprites::drawExternalMask(witch.xPos, witch.yPos-10, areaAttackFrameB, areaAttackMaskB,0, 0); 
     }
@@ -281,7 +311,7 @@ void loop() {
   
   /*Drwing Enemies (bats) Code*/
   for(int i = 0; i<totalBats; i++){ 
-    if((bats[i].levelPosition - 128 <= scrollDistance)&&(bats[i].xPos>0-bats[i].emyWidth) ){
+    if((bats[i].levelPosition - 128 <= scrollDistance) && (bats[i].xPos>0-bats[i].emyWidth) && bats[i].hit == false ){
       bats[i].xPos = bats[i].xPos - bats[i].moveSpeed;
       bats[i].yPos = bats[i].yPos + (bats[i].moveSpeed*bats[i].vertDirection);
       if(bats[i].yPos > 40) { 
