@@ -43,6 +43,9 @@ struct PlayerCharacter{
   int yPos;
   int moveSpeed;
   State state;
+  int health;
+  int invunFrames;
+  bool invunSet;
   unsigned char *defaultFrameA;
   unsigned char *defaultFrameB;
   unsigned char *defaultMask;
@@ -79,10 +82,13 @@ int batLevelStartHeight[totalBats]= {(32-(batOutline[1]/2)),0,0,10}; //currently
 EnemyType1 bats[totalBats];
 Rect batRects[totalBats];
 
-PlayerCharacter witch = { witchDefaultFrameA[0],witchDefaultFrameA[1],0,0,1,State::Default,witchDefaultFrameA,witchDefaultFrameB,witchDefaultABMask };
+PlayerCharacter witch = { witchDefaultFrameA[0],witchDefaultFrameA[1],0,0,1,State::Default, 5, 120, false, witchDefaultFrameA,witchDefaultFrameB,witchDefaultABMask };
+
+  Rect witchRect;
+  Rect areaAttackRect;
+  Rect longAttackRect;
 
 long scrollDistance = 0;
-
 int screenCount = 0;
 int scrollSpeed = 2;
 int cityCounter = -1;
@@ -107,6 +113,8 @@ int longAttackX = -100;
 int longAttackY = -100;
 
 String test = "";
+int gameScreen = 0;
+int witchInvunCount = 0;
 
 Arduboy2 arduboy;
 
@@ -180,6 +188,26 @@ void loop() {
   }
   arduboy.clear();
 
+switch(gameScreen){
+  
+  case 0:
+  arduboy.setCursor(0, 0);
+  arduboy.println("opening screen");
+  
+  //reset all changeable things for new run (I think that is all!)
+  witch.xPos = 0;
+  witch.yPos = 0;
+  witch.health = 5;
+  witch.invunSet = false;
+  scrollDistance = 0;
+  areaAttack = false;
+  longAttack = false;
+  
+  if(arduboy.pressed(A_BUTTON)and aButtonPressed == false) { aButtonPressed = true; gameScreen = 1; } 
+  break;
+  
+  case 1:
+  
   /*Level Position Logic*/
   if (arduboy.everyXFrames(scrollSpeed)){
   scrollDistance++;
@@ -241,12 +269,12 @@ void loop() {
   }
   
   /*Collision Detection*/
-  Rect witchRect = {witch.xPos, witch.yPos+4, witch.pcWidth-8, witch.pcHeight}; //smaller so only body, avoid broom hits counting
-  Rect areaAttackRect = {witch.xPos, witch.yPos-10, 30, 40};  
-  Rect longAttackRect = {longAttackX, longAttackY, 10, 5};  
+   witchRect = {witch.xPos, witch.yPos+4, witch.pcWidth-8, witch.pcHeight}; //smaller so only body, avoid broom hits counting
+   areaAttackRect = {witch.xPos, witch.yPos-10, 30, 40};  
+   longAttackRect = {longAttackX, longAttackY, 10, 5};  
   for(int i = 0; i<totalBats; i++){ 
     batRects[i] = {bats[i].xPos,bats[i].yPos,bats[i].emyWidth,bats[i].emyHeight }; 
-    if(arduboy.collide(witchRect,batRects[i])){  
+    if(arduboy.collide(witchRect,batRects[i]) && bats[i].hit==false){    //forgot to ensure bats haven't already been hit (i.e. removed). For more complex enemies, could use a health > 0 check...
       hitThisCycle = true;  
     }
     if((areaAttack && arduboy.collide(areaAttackRect,batRects[i]))||(longAttack && arduboy.collide(longAttackRect,batRects[i]))) 
@@ -258,13 +286,21 @@ void loop() {
       //bats[i].hit = false;  
     //}  //else not needed outside of hit testing, once hit they are hit and dead unitl respawn
   }
-  if(hitThisCycle==true){ 
-    test = "hit!"; 
+  
+  if(hitThisCycle==true && witch.invunSet==false){ 
+    witch.invunSet = true;
+    witch.health--; //drops too fast! need to make lone hit only.
+    if(witch.health == 0) { gameScreen = 2; }
+    witchInvunCount = arduboy.frameCount + witch.invunFrames;
   } 
-  else { 
-    test = ""; 
+
+  if (arduboy.frameCount == witchInvunCount) {
+    witch.invunSet = false;
   }
-  hitThisCycle= false;
+
+    hitThisCycle= false;
+
+
   
   /*Witch Animation Code*/
   if (arduboy.everyXFrames(18/scrollSpeed)) { 
@@ -278,6 +314,7 @@ void loop() {
   /*Screen Drawing Code*/
   arduboy.setCursor(0, 0);
  //Debug code here
+ arduboy.println(witch.health);
   //arduboy.println(screenCount);
   //arduboy.println(test);
   // for(int i = 0; i<totalBats; i++){ 
@@ -323,7 +360,7 @@ void loop() {
       Sprites::drawOverwrite(bats[i].xPos,bats[i].yPos,bats[i].sprite,0);
     }
   }
-  arduboy.display();  //line that actually draws all the setup stuff above
+
   
   /*Button Reset (avoid multi-press) Logic*/
   if(arduboy.notPressed(A_BUTTON)) {
@@ -344,4 +381,17 @@ void loop() {
   if(arduboy.notPressed(RIGHT_BUTTON)) {
     rightButtonPressed = false;
   } 
+   break;
+
+   case 2:
+   arduboy.setCursor(0, 0);
+   arduboy.println("game Over");
+   if(arduboy.pressed(A_BUTTON)and aButtonPressed == false) { aButtonPressed = true; gameScreen = 0; } 
+   
+   break;
+   default:
+   break;
+  
+}
+  arduboy.display();  //line that actually draws all the setup stuff above in any of the states
 }
