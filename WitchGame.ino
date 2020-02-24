@@ -18,7 +18,7 @@ enum class State : uint8_t {
 enum class PathLogic : uint8_t {
   Wave,
   Straight,
-  LoopNLeave,
+  LoopNLeave, 
   
 };
 
@@ -46,6 +46,7 @@ struct PlayerCharacter{
   int health;
   int invunFrames;
   bool invunSet;
+  int superCharges;
   unsigned char *defaultFrameA;
   unsigned char *defaultFrameB;
   unsigned char *defaultMask;
@@ -77,12 +78,13 @@ struct EnemyType1{
 
 /**************** Variable Declarations *****************/
 const int totalBats = 4;
-long batLevelStartPos[totalBats] = {128,135,260,500};
-int batLevelStartHeight[totalBats]= {(32-(batOutline[1]/2)),0,0,10}; //currently has to be over "bounce point (16) due to movement code. change to factor in move type and direction varies based on this (below midpoint go up,above go down)
+long batLevelStartPos[totalBats] = {128,180,180,500};
+int batLevelStartHeight[totalBats]= {20,10,30,15}; 
+PathLogic batLogic[totalBats] = { PathLogic::Straight, PathLogic::Wave, PathLogic::Wave, PathLogic::Straight };
 EnemyType1 bats[totalBats];
 Rect batRects[totalBats];
 
-PlayerCharacter witch = { witchDefaultFrameA[0],witchDefaultFrameA[1],0,0,1,State::Default, 5, 120, false, witchDefaultFrameA,witchDefaultFrameB,witchDefaultABMask };
+PlayerCharacter witch = { witchDefaultFrameA[0],witchDefaultFrameA[1],0,8,1,State::Default, 5, 120, false, 3, witchDefaultFrameA,witchDefaultFrameB,witchDefaultABMask };
 
   Rect witchRect;
   Rect areaAttackRect;
@@ -108,13 +110,16 @@ int areaAttackFrame = 0;
 int areaAttackLength = 4; //number of frames of witch animation for the attack
 
 bool longAttack = false;
-int longAttackSpeed = 8; //number of pixels it moves per frame
+int longAttackSpeed = 12; //number of pixels it moves per frame
 int longAttackX = -100;
 int longAttackY = -100;
 
 String test = "";
 int gameScreen = 0;
 int witchInvunCount = 0;
+int levelLength = 15; //number of screen the level is (array for multiple levls)
+int batKillCount = 0; //for a score generator
+int score = 0;
 
 Arduboy2 arduboy;
 
@@ -158,14 +163,14 @@ void CreateBats(){
   bats[i].emyWidth = batOutline[0];
   bats[i].emyHeight = batOutline[1];
   bats[i].xPos = 128-batOutline[0];
-  bats[i].yPos = 0;
+  bats[i].yPos = batLevelStartHeight[i];
   bats[i].sprite = batOutline;
-  bats[i].pathing = PathLogic::Wave;
+  bats[i].pathing = batLogic[i];
   bats[i].hit = false;
   bats[i].levelPosition = batLevelStartPos[i];
   bats[i].startHeight = batLevelStartHeight[i];
   bats[i].vertDirection = 1;
-  bats[i].moveSpeed = 1;
+  bats[i].moveSpeed = 1; //too coarse
 
   batRects[i] = { bats[i].emyWidth,bats[i].emyHeight,bats[i].xPos,bats[i].yPos };
  }
@@ -196,14 +201,18 @@ switch(gameScreen){
   
   //reset all changeable things for new run (I think that is all!)
   witch.xPos = 0;
-  witch.yPos = 0;
+  witch.yPos = 8;
   witch.health = 5;
   witch.invunSet = false;
   scrollDistance = 0;
+  screenCount = 0;
   areaAttack = false;
   longAttack = false;
+  witch.superCharges = 3;
+  batKillCount = 0;
+  score =0;
   
-  if(arduboy.pressed(A_BUTTON)and aButtonPressed == false) { aButtonPressed = true; gameScreen = 1; } 
+  if(arduboy.pressed(A_BUTTON) and aButtonPressed == false) { aButtonPressed = true; gameScreen = 1; } 
   break;
   
   case 1:
@@ -212,12 +221,13 @@ switch(gameScreen){
   if (arduboy.everyXFrames(scrollSpeed)){
   scrollDistance++;
   screenCount = (scrollDistance/128) + 1; //this always rounds down (so is correct for whole screens starting at 1)
-  if(screenCount > 5){
+  if(screenCount > levelLength){
     scrollDistance = 0;
     for(int i=0;i<totalBats; i++){
       bats[i].xPos = 128 - bats[i].emyWidth; //test code, reset "level after 5 screen and reset bats to respawn
       bats[i].hit = false;
     }
+    gameScreen = 3;
   }
   }
   
@@ -225,8 +235,8 @@ switch(gameScreen){
   if(arduboy.pressed(UP_BUTTON)) {
     upButtonPressed = true;
     witch.yPos = witch.yPos - witch.moveSpeed;
-    if(witch.yPos<0){
-      witch.yPos=0; //screen limit (top)
+    if(witch.yPos<8){
+      witch.yPos=8; //screen limit (top - text)
     }
   }
   if(arduboy.pressed(DOWN_BUTTON)) {
@@ -252,7 +262,7 @@ switch(gameScreen){
   }  
   if(arduboy.pressed(A_BUTTON)and aButtonPressed == false) {
     aButtonPressed = true;
-    if(areaAttack == false) 
+    if(areaAttack == false && (witch.superCharges > 0)) 
     { 
       areaAttack = true;
       areaAttackFrame = 0; 
@@ -275,7 +285,8 @@ switch(gameScreen){
   for(int i = 0; i<totalBats; i++){ 
     batRects[i] = {bats[i].xPos,bats[i].yPos,bats[i].emyWidth,bats[i].emyHeight }; 
     if(arduboy.collide(witchRect,batRects[i]) && bats[i].hit==false){    //forgot to ensure bats haven't already been hit (i.e. removed). For more complex enemies, could use a health > 0 check...
-      hitThisCycle = true;  
+      hitThisCycle = true;
+      batKillCount++;  
     }
     if((areaAttack && arduboy.collide(areaAttackRect,batRects[i]))||(longAttack && arduboy.collide(longAttackRect,batRects[i]))) 
     {
@@ -306,20 +317,32 @@ switch(gameScreen){
   if (arduboy.everyXFrames(18/scrollSpeed)) { 
     if(!secondFrame) { secondFrame = true; } else { secondFrame = false;}
     if(areaAttack) { areaAttackFrame++; }
-    if(areaAttackFrame > areaAttackLength) { areaAttack = false; areaAttackFrame = 0;}
+    if(areaAttackFrame > areaAttackLength) { areaAttack = false; witch.superCharges--; areaAttackFrame = 0;}
     if(longAttack) { longAttackX = longAttackX + longAttackSpeed; }
     if(longAttackX > 128) { longAttack = false; }
   }
   
   /*Screen Drawing Code*/
   arduboy.setCursor(0, 0);
+  arduboy.print("hp:");
+  for(int i=0; i<6; i++) {
+  if(witch.health>i){
+    arduboy.print("+");
+  }else{
+      arduboy.print(" ");
+    }
+  
+  }
+  arduboy.print("      mp:");
+  for(int i=0; i<witch.superCharges; i++) {
+  arduboy.print("*");
+  }
  //Debug code here
- arduboy.println(witch.health);
-  //arduboy.println(screenCount);
-  //arduboy.println(test);
-  // for(int i = 0; i<totalBats; i++){ 
-  //  if(bats[i].hit==true){ arduboy.println(i); }
-  // }
+ //arduboy.print("012345678901234567890123456789");
+ //arduboy.print(witch.health);
+ //arduboy.print("        ");
+ //arduboy.print(witch.superCharges);
+ 
 
   
   /*Drawing background code*/
@@ -347,19 +370,64 @@ switch(gameScreen){
     } 
   
   /*Drwing Enemies (bats) Code*/
+  //issue here. Bat speed is too coarse using pixels per frame (slowest speed is barely over 2 seconds, next is 1 second, then 0.66)
+  //consider moving to a everyXframes type movement? where the move speed  determins if that bats postion is updated? link to existing scroll speed update rate?
   for(int i = 0; i<totalBats; i++){ 
     if((bats[i].levelPosition - 128 <= scrollDistance) && (bats[i].xPos>0-bats[i].emyWidth) && bats[i].hit == false ){
-      bats[i].xPos = bats[i].xPos - bats[i].moveSpeed;
-      bats[i].yPos = bats[i].yPos + (bats[i].moveSpeed*bats[i].vertDirection);
-      if(bats[i].yPos > 40) { 
-        bats[i].vertDirection = -1; 
-      }
-      if(bats[i].yPos < 16) { 
-        bats[i].vertDirection = 1; 
+
+      switch(bats[i].pathing){
+        
+     case PathLogic::Wave: 
+        bats[i].xPos = bats[i].xPos - bats[i].moveSpeed;
+        bats[i].yPos = bats[i].yPos + (bats[i].moveSpeed*bats[i].vertDirection);
+        if(bats[i].yPos > bats[i].startHeight + 16) { 
+          bats[i].vertDirection = -1; 
+        }
+        if(bats[i].yPos < bats[i].startHeight - 16) { 
+          bats[i].vertDirection = 1; 
+        }
+        break;
+
+       case PathLogic::Straight:
+       bats[i].xPos = bats[i].xPos - bats[i].moveSpeed;
+       bats[i].yPos = bats[i].yPos;
+       break;
+
+       default:
+       break;
+        
       }
       Sprites::drawOverwrite(bats[i].xPos,bats[i].yPos,bats[i].sprite,0);
     }
   }
+
+
+   break;
+
+   case 2:
+   arduboy.setCursor(0, 0);
+   arduboy.println("Game Over");
+   arduboy.println("See if you can make it");
+   arduboy.println("to the end next time!");
+   if(arduboy.pressed(A_BUTTON)and aButtonPressed == false) { aButtonPressed = true; gameScreen = 0; } 
+   break;
+
+   case 3:
+   arduboy.setCursor(0, 0);
+   arduboy.println("Level Win!");
+   score = 0;
+   score = score + (witch.health * 10); //10 pts per bit of health
+   score = score + (witch.superCharges *20); //20 pts per super charge
+   score = score + (batKillCount * 5);
+   arduboy.print("Score: ");
+   arduboy.print(score); 
+   if(arduboy.pressed(A_BUTTON)and aButtonPressed == false) { aButtonPressed = true; gameScreen = 0; } 
+   break;
+   
+   default:
+   break;
+  
+}
 
   
   /*Button Reset (avoid multi-press) Logic*/
@@ -381,17 +449,6 @@ switch(gameScreen){
   if(arduboy.notPressed(RIGHT_BUTTON)) {
     rightButtonPressed = false;
   } 
-   break;
 
-   case 2:
-   arduboy.setCursor(0, 0);
-   arduboy.println("game Over");
-   if(arduboy.pressed(A_BUTTON)and aButtonPressed == false) { aButtonPressed = true; gameScreen = 0; } 
-   
-   break;
-   default:
-   break;
-  
-}
   arduboy.display();  //line that actually draws all the setup stuff above in any of the states
 }
