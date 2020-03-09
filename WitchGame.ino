@@ -77,10 +77,10 @@ struct EnemyType1{
 };
 
 /**************** Variable Declarations *****************/
-const int totalBats = 4;
-long batLevelStartPos[totalBats] = {128,180,180,500};
-int batLevelStartHeight[totalBats]= {20,10,30,15}; 
-PathLogic batLogic[totalBats] = { PathLogic::Straight, PathLogic::Wave, PathLogic::Wave, PathLogic::Straight };
+const short totalBats = 20;
+short batLevelStartPos[totalBats] = {128,180,180,500,600,700,850,850,900,1050,1050,1050,1200,1300,1500,1500,1650,1800,1800,1800};
+short batLevelStartHeight[totalBats]= {20,10,30,15,30,20,10,30,25,5,15,35,20,20,10,30,40,10,20,30}; 
+PathLogic batLogic[totalBats] = { PathLogic::Straight, PathLogic::Wave, PathLogic::Wave, PathLogic::Straight,PathLogic::Wave,PathLogic::Wave,PathLogic::Wave,PathLogic::Straight,PathLogic::Straight,PathLogic::Wave,PathLogic::Wave,PathLogic::Straight,PathLogic::Straight,PathLogic::Wave,PathLogic::Wave,PathLogic::Straight,PathLogic::Wave,PathLogic::Wave,PathLogic::Straight,PathLogic::Wave };
 EnemyType1 bats[totalBats];
 Rect batRects[totalBats];
 
@@ -90,11 +90,11 @@ PlayerCharacter witch = { witchDefaultFrameA[0],witchDefaultFrameA[1],0,8,1,Stat
   Rect areaAttackRect;
   Rect longAttackRect;
 
-long scrollDistance = 0;
-int screenCount = 0;
-int scrollSpeed = 2;
-int cityCounter = -1;
-int hillsCounter = -1;
+int scrollDistance = 0;
+short screenCount = 0;
+short scrollSpeed = 2;
+short cityCounter = -1;
+short hillsCounter = -1;
 
 bool aButtonPressed = false;
 bool bButtonPressed = false;
@@ -106,19 +106,19 @@ bool secondFrame = false;
 bool hitThisCycle = false;
 
 bool areaAttack = false;
-int areaAttackFrame = 0;
-int areaAttackLength = 4; //number of frames of witch animation for the attack
+short areaAttackFrame = 0;
+short areaAttackLength = 4; //number of frames of witch animation for the attack
 
 bool longAttack = false;
-int longAttackSpeed = 12; //number of pixels it moves per frame
-int longAttackX = -100;
-int longAttackY = -100;
+short longAttackSpeed = 12; //number of pixels it moves per frame
+short longAttackX = -100;
+short longAttackY = -100;
 
 String test = "";
-int gameScreen = 0;
-int witchInvunCount = 0;
-int levelLength = 15; //number of screen the level is (array for multiple levls)
-int batKillCount = 0; //for a score generator
+short gameScreen = 0;
+short witchInvunCount = 0;
+short levelLength = 15; //number of screen the level is (array for multiple levls)
+short batKillCount = 0; //for a score generator
 int score = 0;
 
 Arduboy2 arduboy;
@@ -183,7 +183,6 @@ void setup() {
   arduboy.clear();
   arduboy.audio.on();
 
-  CreateBats(); //see above, makes all the bat data in game at start up (could put at level start if multiple levels?)
 }
 
 /**************** Main Code Loop *****************/
@@ -196,10 +195,19 @@ void loop() {
 switch(gameScreen){
   
   case 0:
-  arduboy.setCursor(0, 0);
-  arduboy.println("opening screen");
+    arduboy.setCursor(0, 0);
+  arduboy.println("Wizardal Technicry...");
+  arduboy.println("proundly presents...");
+  if(arduboy.pressed(B_BUTTON) and bButtonPressed == false) { bButtonPressed = true; gameScreen = 1; } 
+  break;
+  
+  case 1:
+  Sprites::drawOverwrite(0,0,StartScreen,0);
+  arduboy.setCursor(68, 32);
+  arduboy.println("Press B!");
   
   //reset all changeable things for new run (I think that is all!)
+  CreateBats();  //see above, makes all the bat data in game at start up (could put at level start if multiple levels?)
   witch.xPos = 0;
   witch.yPos = 8;
   witch.health = 5;
@@ -212,10 +220,10 @@ switch(gameScreen){
   batKillCount = 0;
   score =0;
   
-  if(arduboy.pressed(A_BUTTON) and aButtonPressed == false) { aButtonPressed = true; gameScreen = 1; } 
+  if(arduboy.pressed(B_BUTTON) and bButtonPressed == false) { bButtonPressed = true; gameScreen = 2; } 
   break;
   
-  case 1:
+  case 2:
   
   /*Level Position Logic*/
   if (arduboy.everyXFrames(scrollSpeed)){
@@ -227,7 +235,7 @@ switch(gameScreen){
       bats[i].xPos = 128 - bats[i].emyWidth; //test code, reset "level after 5 screen and reset bats to respawn
       bats[i].hit = false;
     }
-    gameScreen = 3;
+    gameScreen = 4;
   }
   }
   
@@ -301,7 +309,7 @@ switch(gameScreen){
   if(hitThisCycle==true && witch.invunSet==false){ 
     witch.invunSet = true;
     witch.health--; //drops too fast! need to make lone hit only.
-    if(witch.health == 0) { gameScreen = 2; }
+    if(witch.health == 0) { gameScreen = 3; }
     witchInvunCount = arduboy.frameCount + witch.invunFrames;
   } 
 
@@ -337,14 +345,8 @@ switch(gameScreen){
   for(int i=0; i<witch.superCharges; i++) {
   arduboy.print("*");
   }
- //Debug code here
- //arduboy.print("012345678901234567890123456789");
- //arduboy.print(witch.health);
- //arduboy.print("        ");
- //arduboy.print(witch.superCharges);
- 
 
-  
+
   /*Drawing background code*/
   hillsCounter = BackgroundLayer(hillsBackdrop, hillsCounter);
   cityCounter = ForegroundLayer(citySkyline, cityCounter);
@@ -404,23 +406,34 @@ switch(gameScreen){
 
    break;
 
-   case 2:
-   arduboy.setCursor(0, 0);
-   arduboy.println("Game Over");
-   arduboy.println("See if you can make it");
-   arduboy.println("to the end next time!");
-   if(arduboy.pressed(A_BUTTON)and aButtonPressed == false) { aButtonPressed = true; gameScreen = 0; } 
-   break;
-
    case 3:
    arduboy.setCursor(0, 0);
-   arduboy.println("Level Win!");
+   arduboy.println("   Game Over  :(");
+   arduboy.println("See if you can make");
+   arduboy.println("the end next time!");
+   Sprites::drawOverwrite(48,32,TreeCrash,0);
+   if(arduboy.pressed(B_BUTTON)and bButtonPressed == false) { bButtonPressed = true; gameScreen = 0; } 
+   break;
+
+   case 4:
+   arduboy.setCursor(0, 0);
+   Sprites::drawOverwrite(0,0,WinScreen,0);
+   if(arduboy.pressed(B_BUTTON)and bButtonPressed == false) { bButtonPressed = true; gameScreen = 5; } 
+   break;
+   
+   case 5:
+   arduboy.setCursor(0, 0);
+   arduboy.println("You did it!");
    score = 0;
    score = score + (witch.health * 10); //10 pts per bit of health
    score = score + (witch.superCharges *20); //20 pts per super charge
    score = score + (batKillCount * 5);
    arduboy.print("Score: ");
    arduboy.print(score); 
+   arduboy.println("");
+   arduboy.println("");
+   arduboy.println("");
+   arduboy.println("Press A to restart");
    if(arduboy.pressed(A_BUTTON)and aButtonPressed == false) { aButtonPressed = true; gameScreen = 0; } 
    break;
    
