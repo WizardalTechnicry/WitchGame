@@ -61,26 +61,26 @@ struct PlayerCharacter{
 };
 
 struct EnemyType1{
- int emyWidth;
- int emyHeight;
- int xPos;
- int yPos;
+ short emyWidth;
+ short emyHeight;
+ short xPos;
+ short yPos;
  unsigned char *sprite;
  PathLogic pathing;
  bool hit;
- long levelPosition;
- int startHeight;
- int vertDirection;
- int moveSpeed;
+ int levelPosition;
+ short startHeight;
+ short vertDirection;
+ short moveSpeed;
   //unsigned char *mask; //not needed for the bats
  //could also add frame like the witch if animated
 };
 
 /**************** Variable Declarations *****************/
-const short totalBats = 20;
-short batLevelStartPos[totalBats] = {128,180,180,500,600,700,850,850,900,1050,1050,1050,1200,1300,1500,1500,1650,1800,1800,1800};
-short batLevelStartHeight[totalBats]= {20,10,30,15,30,20,10,30,25,5,15,35,20,20,10,30,40,10,20,30}; 
-PathLogic batLogic[totalBats] = { PathLogic::Straight, PathLogic::Wave, PathLogic::Wave, PathLogic::Straight,PathLogic::Wave,PathLogic::Wave,PathLogic::Wave,PathLogic::Straight,PathLogic::Straight,PathLogic::Wave,PathLogic::Wave,PathLogic::Straight,PathLogic::Straight,PathLogic::Wave,PathLogic::Wave,PathLogic::Straight,PathLogic::Wave,PathLogic::Wave,PathLogic::Straight,PathLogic::Wave };
+const short totalBats = 12;
+short batLevelStartPos[totalBats] = {128,180,180,500,600,700,850,850,900,1050,1050,1050};
+short batLevelStartHeight[totalBats]= {20,10,30,15,30,20,10,30,25,5,15,35}; 
+PathLogic batLogic[totalBats] = { PathLogic::Straight, PathLogic::Wave, PathLogic::Wave, PathLogic::Straight,PathLogic::Wave,PathLogic::Wave,PathLogic::Wave,PathLogic::Straight,PathLogic::Straight,PathLogic::Wave,PathLogic::Wave,PathLogic::Straight };
 EnemyType1 bats[totalBats];
 Rect batRects[totalBats];
 
@@ -117,7 +117,7 @@ short longAttackY = -100;
 String test = "";
 short gameScreen = 0;
 short witchInvunCount = 0;
-short levelLength = 15; //number of screen the level is (array for multiple levls)
+short levelLength = 10; //number of screen the level is (array for multiple levls)
 short batKillCount = 0; //for a score generator
 int score = 0;
 
