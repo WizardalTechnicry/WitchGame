@@ -25,7 +25,7 @@ enum class PathLogic : uint8_t {
 struct Background{
   unsigned char *imageData1;
   unsigned char *imageData2;
-  int scrollRate;  
+  short scrollRate;  
 };
 
 struct Foreground{
@@ -33,18 +33,18 @@ struct Foreground{
   unsigned char *imageData1Mask;
   unsigned char *imageData2;
   unsigned char *imageData2Mask;
-  int scrollRate;
+  short scrollRate;
 };
 
 struct PlayerCharacter{
-  int pcWidth;
-  int pcHeight;
-  int xPos;
-  int yPos;
-  int moveSpeed;
+  short pcWidth;
+  short pcHeight;
+  short xPos;
+  short yPos;
+  short moveSpeed;
   State state;
-  int health;
-  int invunFrames;
+  short health;
+  short invunFrames;
   bool invunSet;
   int superCharges;
   unsigned char *defaultFrameA;
@@ -78,9 +78,9 @@ struct EnemyType1{
 
 /**************** Variable Declarations *****************/
 const short totalBats = 12;
-short batLevelStartPos[totalBats] = {128,180,180,500,600,700,850,850,900,1050,1050,1050};
-short batLevelStartHeight[totalBats]= {20,10,30,15,30,20,10,30,25,5,15,35}; 
-PathLogic batLogic[totalBats] = { PathLogic::Straight, PathLogic::Wave, PathLogic::Wave, PathLogic::Straight,PathLogic::Wave,PathLogic::Wave,PathLogic::Wave,PathLogic::Straight,PathLogic::Straight,PathLogic::Wave,PathLogic::Wave,PathLogic::Straight };
+short batLevelStartPos[totalBats] = {64,192,340,340,490,512,620,760,760,890,900,890};
+short batLevelStartHeight[totalBats]= {20,30,15,30,20,40,25,15,40,15,25,35}; 
+PathLogic batLogic[totalBats] = { PathLogic::Straight, PathLogic::Wave, PathLogic::Wave, PathLogic::Wave,PathLogic::Straight,PathLogic::Straight,PathLogic::Wave,PathLogic::Straight,PathLogic::Straight,PathLogic::Straight,PathLogic::Wave, PathLogic::Straight };
 EnemyType1 bats[totalBats];
 Rect batRects[totalBats];
 
@@ -117,9 +117,9 @@ short longAttackY = -100;
 String test = "";
 short gameScreen = 0;
 short witchInvunCount = 0;
-short levelLength = 10; //number of screen the level is (array for multiple levls)
+short levelLength = 8; //number of screen the level is (array for multiple levls)
 short batKillCount = 0; //for a score generator
-int score = 0;
+short score = 0;
 
 Arduboy2 arduboy;
 
@@ -167,10 +167,17 @@ void CreateBats(){
   bats[i].sprite = batOutline;
   bats[i].pathing = batLogic[i];
   bats[i].hit = false;
-  bats[i].levelPosition = batLevelStartPos[i];
+  bats[i].levelPosition = batLevelStartPos[i]+100;
   bats[i].startHeight = batLevelStartHeight[i];
   bats[i].vertDirection = 1;
-  bats[i].moveSpeed = 1; //too coarse
+  if((i==6)||(i==7)||(i==8)||(i==9)||(i==10)||(i==11))
+  {
+    bats[i].moveSpeed = 2; //too coarse
+  }
+  else 
+  {
+    bats[i].moveSpeed = 1; 
+  }
 
   batRects[i] = { bats[i].emyWidth,bats[i].emyHeight,bats[i].xPos,bats[i].yPos };
  }
@@ -290,20 +297,28 @@ switch(gameScreen){
    witchRect = {witch.xPos, witch.yPos+4, witch.pcWidth-8, witch.pcHeight}; //smaller so only body, avoid broom hits counting
    areaAttackRect = {witch.xPos, witch.yPos-10, 30, 40};  
    longAttackRect = {longAttackX, longAttackY, 10, 5};  
+  
+  
   for(int i = 0; i<totalBats; i++){ 
-    batRects[i] = {bats[i].xPos,bats[i].yPos,bats[i].emyWidth,bats[i].emyHeight }; 
+    
+    if((bats[i].levelPosition - 128 <= scrollDistance) && (bats[i].xPos > 0-bats[i].emyWidth) && bats[i].hit == false ) 
+    {
+      batRects[i] = {bats[i].xPos,bats[i].yPos,bats[i].emyWidth,bats[i].emyHeight }; 
+    }
+    else
+    {
+      batRects[i] = { 10000,10000,0,0 };
+    }
+    
     if(arduboy.collide(witchRect,batRects[i]) && bats[i].hit==false){    //forgot to ensure bats haven't already been hit (i.e. removed). For more complex enemies, could use a health > 0 check...
       hitThisCycle = true;
-      batKillCount++;  
+      
     }
-    if((areaAttack && arduboy.collide(areaAttackRect,batRects[i]))||(longAttack && arduboy.collide(longAttackRect,batRects[i]))) 
+    if(((areaAttack && arduboy.collide(areaAttackRect,batRects[i]))||(longAttack && arduboy.collide(longAttackRect,batRects[i]))) && bats[i].hit==false) 
     {
-      bats[i].hit = true;  
+      bats[i].hit = true;
+      batKillCount++;    
     }
-    //else
-    //{
-      //bats[i].hit = false;  
-    //}  //else not needed outside of hit testing, once hit they are hit and dead unitl respawn
   }
   
   if(hitThisCycle==true && witch.invunSet==false){ 
@@ -327,7 +342,7 @@ switch(gameScreen){
     if(areaAttack) { areaAttackFrame++; }
     if(areaAttackFrame > areaAttackLength) { areaAttack = false; witch.superCharges--; areaAttackFrame = 0;}
     if(longAttack) { longAttackX = longAttackX + longAttackSpeed; }
-    if(longAttackX > 128) { longAttack = false; }
+    if(longAttackX > 128) { longAttackY = -100; longAttack = false; }
   }
   
   /*Screen Drawing Code*/
@@ -345,6 +360,8 @@ switch(gameScreen){
   for(int i=0; i<witch.superCharges; i++) {
   arduboy.print("*");
   }
+  arduboy.println();
+ 
 
 
   /*Drawing background code*/
@@ -375,7 +392,7 @@ switch(gameScreen){
   //issue here. Bat speed is too coarse using pixels per frame (slowest speed is barely over 2 seconds, next is 1 second, then 0.66)
   //consider moving to a everyXframes type movement? where the move speed  determins if that bats postion is updated? link to existing scroll speed update rate?
   for(int i = 0; i<totalBats; i++){ 
-    if((bats[i].levelPosition - 128 <= scrollDistance) && (bats[i].xPos>0-bats[i].emyWidth) && bats[i].hit == false ){
+    if((bats[i].levelPosition - 128 <= scrollDistance) && (bats[i].xPos > 0-bats[i].emyWidth) && bats[i].hit == false ){
 
       switch(bats[i].pathing){
         
@@ -427,7 +444,7 @@ switch(gameScreen){
    score = 0;
    score = score + (witch.health * 10); //10 pts per bit of health
    score = score + (witch.superCharges *20); //20 pts per super charge
-   score = score + (batKillCount * 5);
+   score = score + (batKillCount * 15);
    arduboy.print("Score: ");
    arduboy.print(score); 
    arduboy.println("");
